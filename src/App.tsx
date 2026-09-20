@@ -1,48 +1,54 @@
-import React, { useState } from "react";
+import React from "react";
+import { ShieldCheck } from "lucide-react";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import { SecurityProvider, useSecurity } from "./context/SecurityContext";
-import { DeviceFrame } from "./components/common/DeviceFrame";
 import { Header } from "./components/common/Header";
 import { BottomNav } from "./components/common/BottomNav";
 import { HomeTab } from "./components/home/HomeTab";
 import { ScanTab } from "./components/scan/ScanTab";
 import { AlertsTab } from "./components/alerts/AlertsTab";
-import { AppAuditTab } from "./components/audit/AppAuditTab";
 import { SettingsTab } from "./components/settings/SettingsTab";
-import { OnboardingModal } from "./components/onboarding/OnboardingModal";
-import { PWAInstallBanner } from "./components/common/PWAInstallBanner";
-import { GetOnPhoneModal } from "./components/common/GetOnPhoneModal";
+import { AuthScreen } from "./components/auth/AuthScreen";
 
 const AppContent: React.FC = () => {
+  const { isReady, user } = useAuth();
   const { activeTab } = useSecurity();
-  const [showGetOnPhoneModal, setShowGetOnPhoneModal] = useState(false);
+
+  if (!isReady) {
+    return (
+      <div className="grid min-h-screen place-items-center bg-[#07111f] text-slate-100">
+        <div className="flex items-center gap-3 text-sm text-slate-300">
+          <ShieldCheck className="h-5 w-5 animate-pulse text-cyan-300" />
+          Preparing your private workspace…
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <AuthScreen />;
+  }
 
   return (
-    <DeviceFrame>
-      <PWAInstallBanner onOpenGetOnPhoneModal={() => setShowGetOnPhoneModal(true)} />
-      <Header onOpenGetOnPhone={() => setShowGetOnPhoneModal(true)} />
-      <main className="flex-1 overflow-y-auto">
+    <div className="flex min-h-screen flex-col bg-[#07111f] text-slate-100">
+      <Header />
+      <main className="flex-1">
         {activeTab === "home" && <HomeTab />}
         {activeTab === "scan" && <ScanTab />}
         {activeTab === "alerts" && <AlertsTab />}
-        {activeTab === "audit" && <AppAuditTab />}
-        {activeTab === "settings" && (
-          <SettingsTab onOpenGetOnPhone={() => setShowGetOnPhoneModal(true)} />
-        )}
+        {activeTab === "settings" && <SettingsTab />}
       </main>
       <BottomNav />
-      <OnboardingModal />
-      <GetOnPhoneModal
-        isOpen={showGetOnPhoneModal}
-        onClose={() => setShowGetOnPhoneModal(false)}
-      />
-    </DeviceFrame>
+    </div>
   );
 };
 
 export default function App() {
   return (
-    <SecurityProvider>
-      <AppContent />
-    </SecurityProvider>
+    <AuthProvider>
+      <SecurityProvider>
+        <AppContent />
+      </SecurityProvider>
+    </AuthProvider>
   );
 }

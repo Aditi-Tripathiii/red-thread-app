@@ -1,105 +1,56 @@
-import React from "react";
-import { Shield, ShieldAlert, ShieldCheck, PauseCircle, Smartphone, Monitor, BellRing, QrCode } from "lucide-react";
-import { useSecurity } from "../../context/SecurityContext";
+import React, { useState } from "react";
+import { ChevronDown, LogOut, ShieldCheck } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
 
-interface HeaderProps {
-  onOpenGetOnPhone?: () => void;
-}
-
-export const Header: React.FC<HeaderProps> = ({ onOpenGetOnPhone }) => {
-  const { consent, securityScore, deviceFrameMode, setDeviceFrameMode, triggerSimulatedAlert } = useSecurity();
+export const Header: React.FC = () => {
+  const { user, signOut } = useAuth();
+  const [showMenu, setShowMenu] = useState(false);
+  const initial = user?.name.trim().charAt(0).toUpperCase() || "U";
 
   return (
-    <header className="sticky top-0 z-30 bg-[#070B14]/90 backdrop-blur-md border-b border-[#1A2640] px-4 py-3">
-      <div className="max-w-4xl mx-auto flex items-center justify-between">
-        {/* Brand & Status */}
-        <div className="flex items-center space-x-3">
-          <div className="relative">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 via-indigo-600 to-cyan-500 p-[1.5px] shadow-lg shadow-blue-500/20">
-              <div className="w-full h-full bg-[#070B14] rounded-[10px] flex items-center justify-center">
-                {consent.protectionPaused ? (
-                  <ShieldAlert className="w-5 h-5 text-amber-400 animate-pulse" />
-                ) : (
-                  <ShieldCheck className="w-5 h-5 text-cyan-400" />
-                )}
-              </div>
-            </div>
-            {/* Live indicator dot */}
-            <span
-              className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#070B14] ${
-                consent.protectionPaused ? "bg-amber-400" : "bg-emerald-400 animate-pulse"
-              }`}
-            />
+    <header className="sticky top-0 z-30 border-b border-white/10 bg-[#07111f]/90 px-4 py-3 backdrop-blur-xl">
+      <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-cyan-300 to-blue-600 shadow-lg shadow-cyan-950/30">
+            <ShieldCheck className="h-5 w-5 text-slate-950" />
           </div>
-
-          <div>
-            <div className="flex items-center space-x-2">
-              <h1 className="text-base font-bold tracking-tight text-slate-100">Red Thread</h1>
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/30">
-                v1.0 MVP
-              </span>
-            </div>
-            <p className="text-xs text-slate-400 flex items-center gap-1.5">
-              {consent.protectionPaused ? (
-                <span className="text-amber-400 flex items-center gap-1">
-                  <PauseCircle className="w-3 h-3 inline" /> Protection Paused
-                </span>
-              ) : (
-                <span className="text-emerald-400 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Active Protection
-                </span>
-              )}
-              <span className="text-slate-600">•</span>
-              <span className="text-slate-400">Score: {securityScore}/100</span>
-            </p>
+          <div className="min-w-0">
+            <h1 className="truncate text-sm font-bold tracking-tight text-slate-100 sm:text-base">Red Thread</h1>
+            <p className="truncate text-[11px] text-slate-400">Local message and link checks</p>
           </div>
         </div>
 
-        {/* Action Controls */}
-        <div className="flex items-center space-x-2">
-          {/* Get on Phone Button */}
-          {onOpenGetOnPhone && (
-            <button
-              id="btn-get-on-phone"
-              onClick={onOpenGetOnPhone}
-              title="Get Red Thread on your Android or iPhone"
-              className="flex items-center gap-1.5 text-xs font-semibold bg-gradient-to-r from-blue-600/30 to-cyan-500/30 hover:from-blue-600/50 hover:to-cyan-500/50 text-cyan-300 border border-cyan-500/40 px-2.5 py-1.5 rounded-lg transition-all active:scale-95 shadow-sm"
-            >
-              <Smartphone className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Get on Phone</span>
-            </button>
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setShowMenu((open) => !open)}
+            aria-expanded={showMenu}
+            className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 py-1.5 pl-1.5 pr-2.5 text-left transition hover:bg-white/10"
+          >
+            <span className="grid h-7 w-7 place-items-center rounded-lg bg-cyan-300/15 text-xs font-bold text-cyan-200">
+              {initial}
+            </span>
+            <span className="hidden max-w-28 truncate text-xs font-semibold text-slate-200 sm:block">{user?.name}</span>
+            <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+          </button>
+
+          {showMenu && (
+            <div className="absolute right-0 top-11 w-60 rounded-2xl border border-white/10 bg-[#0d1b2e] p-2 shadow-2xl shadow-black/30">
+              <div className="border-b border-white/10 px-3 py-2.5">
+                <p className="text-xs font-semibold text-slate-100">{user?.name}</p>
+                <p className="mt-0.5 truncate text-[11px] text-slate-400">{user?.email}</p>
+                <p className="mt-1 text-[10px] text-cyan-300">Local profile on this device</p>
+              </div>
+              <button
+                type="button"
+                onClick={signOut}
+                className="mt-1 flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-300 transition hover:bg-rose-400/10 hover:text-rose-200"
+              >
+                <LogOut className="h-4 w-4" />
+                Log out
+              </button>
+            </div>
           )}
-
-          {/* Quick Simulate Alert */}
-          <button
-            id="btn-simulate-alert"
-            onClick={() => triggerSimulatedAlert()}
-            title="Simulate incoming suspicious message or notification"
-            className="hidden sm:flex items-center gap-1.5 text-xs font-medium bg-[#121B2D] hover:bg-[#1A2640] text-slate-300 border border-[#2A3A5E] px-2.5 py-1.5 rounded-lg transition-all active:scale-95"
-          >
-            <BellRing className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Simulate Alert</span>
-          </button>
-
-          {/* Toggle Device Frame View */}
-          <button
-            id="btn-toggle-device-frame"
-            onClick={() => setDeviceFrameMode(!deviceFrameMode)}
-            title={deviceFrameMode ? "Switch to Responsive View" : "Switch to Android Frame Preview"}
-            className="flex items-center gap-1.5 text-xs font-medium bg-[#121B2D] hover:bg-[#1A2640] text-slate-300 border border-[#2A3A5E] px-2.5 py-1.5 rounded-lg transition-all active:scale-95"
-          >
-            {deviceFrameMode ? (
-              <>
-                <Monitor className="w-3.5 h-3.5 text-blue-400" />
-                <span className="hidden md:inline">Full View</span>
-              </>
-            ) : (
-              <>
-                <Smartphone className="w-3.5 h-3.5 text-blue-400" />
-                <span className="hidden md:inline">Android Frame</span>
-              </>
-            )}
-          </button>
         </div>
       </div>
     </header>

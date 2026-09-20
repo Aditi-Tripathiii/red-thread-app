@@ -51,9 +51,9 @@ interface SecurityContextType {
 const SecurityContext = createContext<SecurityContextType | undefined>(undefined);
 
 const STORAGE_KEYS = {
-  HISTORY: "redthread_history_v1",
-  CONSENT: "redthread_consent_v1",
-  EXCLUSIONS: "redthread_exclusions_v1",
+  HISTORY: "redthread_history_v2",
+  CONSENT: "redthread_consent_v2",
+  EXCLUSIONS: "redthread_exclusions_v2",
 };
 
 export const SecurityProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -103,48 +103,11 @@ export const SecurityProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const saved = localStorage.getItem(STORAGE_KEYS.HISTORY);
       if (saved) return JSON.parse(saved);
     } catch {}
-    // Seed initial mock detection alerts to showcase HeroUI dashboard immediately
-    const initialSeed = [
-      analyzeContentLocallyClient(
-        SAMPLE_SCENARIOS[0].content,
-        "SMS",
-        ["http://sbi-kyc-update.xyz/login"],
-        SAMPLE_SCENARIOS[0].sender,
-        "com.google.android.apps.messaging",
-        "Messages"
-      ),
-      analyzeContentLocallyClient(
-        SAMPLE_SCENARIOS[2].content,
-        "NOTIFICATION",
-        [],
-        SAMPLE_SCENARIOS[2].sender,
-        "com.whatsapp",
-        "WhatsApp"
-      ),
-      analyzeContentLocallyClient(
-        SAMPLE_SCENARIOS[5].content,
-        "SMS",
-        [],
-        SAMPLE_SCENARIOS[5].sender,
-        "com.google.android.apps.messaging",
-        "Messages"
-      ),
-    ];
-    return initialSeed;
+    return [];
   });
 
   // Email Accounts
-  const [emailAccounts, setEmailAccounts] = useState<EmailConnection[]>([
-    {
-      id: "email-gmail-1",
-      provider: "GMAIL",
-      accountDisplayName: "user.security@gmail.com",
-      scopes: ["https://www.googleapis.com/auth/gmail.readonly"],
-      connectedAt: "2026-09-10",
-      lastSyncAt: "10 mins ago",
-      status: "CONNECTED",
-    },
-  ]);
+  const [emailAccounts, setEmailAccounts] = useState<EmailConnection[]>([]);
 
   // Persist consent
   useEffect(() => {

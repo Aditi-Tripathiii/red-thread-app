@@ -1,397 +1,195 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
-  BellRing,
-  AlertTriangle,
-  ShieldCheck,
-  ShieldAlert,
-  Filter,
-  Trash2,
+  ArrowLeft,
+  ArrowRight,
   CheckCircle2,
-  ExternalLink,
-  ThumbsUp,
-  Flag,
+  ClipboardList,
   Search,
-  ChevronRight,
-  Sparkles,
-  Play,
-  X,
-  ShieldOff,
+  ShieldAlert,
+  ShieldCheck,
+  Trash2,
 } from "lucide-react";
+import { AnalysisRecord } from "../../types";
 import { useSecurity } from "../../context/SecurityContext";
-import { AnalysisRecord, RiskLevel, SourceType } from "../../types";
-import { SAMPLE_SCENARIOS } from "../../data/sampleScams";
+
+type Filter = "all" | "attention" | "safe";
+
+const riskTone = {
+  HIGH: "border-rose-300/25 bg-rose-300/10 text-rose-100",
+  SUSPICIOUS: "border-amber-300/25 bg-amber-300/10 text-amber-100",
+  NEEDS_CAUTION: "border-amber-300/25 bg-amber-300/10 text-amber-100",
+  SAFE: "border-emerald-300/25 bg-emerald-300/10 text-emerald-100",
+};
 
 export const AlertsTab: React.FC = () => {
-  const {
-    history,
-    deleteRecord,
-    markAlertReviewed,
-    reportFeedback,
-    toggleAppExclusion,
-    installedApps,
-    triggerSimulatedAlert,
-  } = useSecurity();
+  const { history, deleteRecord, markAlertReviewed, setActiveTab } = useSecurity();
+  const [filter, setFilter] = useState<Filter>("all");
+  const [query, setQuery] = useState("");
+  const [selected, setSelected] = useState<AnalysisRecord | null>(null);
 
-  const [riskFilter, setRiskFilter] = useState<RiskLevel | "ALL">("ALL");
-  const [sourceFilter, setSourceFilter] = useState<SourceType | "ALL">("ALL");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedAlert, setSelectedAlert] = useState<AnalysisRecord | null>(null);
-  const [showSimulatorDrawer, setShowSimulatorDrawer] = useState(false);
+  const records = useMemo(
+    () =>
+      history.filter((record) => {
+        const matchesFilter =
+          filter === "all" ||
+          (filter === "safe" ? record.riskLevel === "SAFE" : record.riskLevel !== "SAFE");
+        const needle = query.trim().toLowerCase();
+        const matchesQuery =
+          !needle ||
+          record.originalContentSnippet.toLowerCase().includes(needle) ||
+          record.category.toLowerCase().includes(needle);
+        return matchesFilter && matchesQuery;
+      }),
+    [filter, history, query]
+  );
 
-  // Filtered alerts
-  const filteredAlerts = history.filter((item) => {
-    if (riskFilter !== "ALL" && item.riskLevel !== riskFilter) return false;
-    if (sourceFilter !== "ALL" && item.sourceType !== sourceFilter) return false;
-    if (
-      searchQuery &&
-      !item.originalContentSnippet.toLowerCase().includes(searchQuery.toLowerCase()) &&
-      !item.category.toLowerCase().includes(searchQuery.toLowerCase())
-    ) {
-      return false;
-    }
-    return true;
-  });
-
-  const handleSelectAlert = (alert: AnalysisRecord) => {
-    setSelectedAlert(alert);
-    if (!alert.reviewed) {
-      markAlertReviewed(alert.id);
-    }
+  const openRecord = (record: AnalysisRecord) => {
+    setSelected(record);
+    if (!record.reviewed) markAlertReviewed(record.id);
   };
 
-  return (
-    <div className="p-4 sm:p-6 space-y-6 max-w-4xl mx-auto pb-24">
-      {/* Header & Simulator CTA */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-slate-100 flex items-center gap-2">
-            <BellRing className="w-5 h-5 text-cyan-400" />
-            <span>Live Security Alerts</span>
-          </h2>
-          <p className="text-xs text-slate-400 mt-1">
-            Real-time feed of intercepted SMS, push notification previews, and manual scans.
-          </p>
-        </div>
-
-        <button
-          id="btn-open-simulator"
-          onClick={() => setShowSimulatorDrawer(true)}
-          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-600/30 to-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-semibold hover:bg-cyan-500/20 active:scale-95 transition-all self-start sm:self-auto"
-        >
-          <Play className="w-3.5 h-3.5 fill-cyan-400 text-cyan-400" />
-          <span>Simulate Incoming Alert</span>
+  if (selected) {
+    const tone = riskTone[selected.riskLevel];
+    return (
+      <div className="mx-auto w-full max-w-3xl px-4 py-6 pb-28 sm:px-6 sm:py-8">
+        <button type="button" onClick={() => setSelected(null)} className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-cyan-200">
+          <ArrowLeft className="h-3.5 w-3.5" /> Back to history
         </button>
-      </div>
-
-      {/* Simulator Drawer / Modal */}
-      {showSimulatorDrawer && (
-        <div className="bg-[#121B2D] border border-cyan-500/30 rounded-3xl p-5 shadow-2xl space-y-4 animate-in fade-in">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-cyan-400" />
-              <h3 className="text-sm font-bold text-slate-100">
-                Simulate Intercepted Android Traffic
-              </h3>
+        <section className="mt-4 rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-5 sm:p-6">
+          <div className="flex flex-wrap items-start justify-between gap-4 border-b border-white/10 pb-5">
+            <div className="flex gap-3">
+              <span className={`grid h-11 w-11 place-items-center rounded-2xl border ${tone}`}>
+                {selected.riskLevel === "SAFE" ? <ShieldCheck className="h-5 w-5" /> : <ShieldAlert className="h-5 w-5" />}
+              </span>
+              <div>
+                <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-bold ${tone}`}>{selected.riskLevel.replace(/_/g, " ")}</span>
+                <h2 className="mt-2 text-xl font-black text-white">{selected.category.replace(/_/g, " ")}</h2>
+                <p className="mt-1 text-xs text-slate-400">Checked {new Date(selected.createdAt).toLocaleString()}</p>
+              </div>
             </div>
             <button
-              onClick={() => setShowSimulatorDrawer(false)}
-              className="text-slate-400 hover:text-slate-200 p-1"
+              type="button"
+              onClick={() => {
+                deleteRecord(selected.id);
+                setSelected(null);
+              }}
+              className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold text-slate-400 hover:bg-rose-300/10 hover:text-rose-100"
             >
-              <X className="w-4 h-4" />
+              <Trash2 className="h-3.5 w-3.5" /> Delete
             </button>
           </div>
-          <p className="text-xs text-slate-400">
-            Pick a realistic scenario below to simulate how Red Thread intercepts and evaluates incoming content on Android without blocking phone functionality:
-          </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            {SAMPLE_SCENARIOS.map((s) => (
-              <button
-                key={s.id}
-                onClick={() => {
-                  triggerSimulatedAlert(s.id);
-                  setShowSimulatorDrawer(false);
-                }}
-                className="text-left bg-[#070B14] hover:bg-[#0E172A] border border-[#1E2E4E] hover:border-cyan-500/40 p-3 rounded-2xl transition-all group"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-200 group-hover:text-cyan-300">
-                    {s.title}
-                  </span>
-                  <span
-                    className={`text-[9px] font-bold px-1.5 py-0.2 rounded ${
-                      s.expectedRisk === "HIGH"
-                        ? "bg-rose-500/20 text-rose-300"
-                        : s.expectedRisk === "SUSPICIOUS"
-                        ? "bg-amber-500/20 text-amber-300"
-                        : "bg-emerald-500/20 text-emerald-300"
-                    }`}
-                  >
-                    {s.expectedRisk}
-                  </span>
+          <div className="mt-5 space-y-5">
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">What you checked</h3>
+              <p className="mt-2 rounded-xl bg-slate-950/40 p-3 text-sm leading-relaxed text-slate-300">{selected.redactedContent}</p>
+            </div>
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Why it was flagged</h3>
+              {selected.indicators.length ? (
+                <div className="mt-2 space-y-2">
+                  {selected.indicators.map((indicator) => (
+                    <div key={`${indicator.type}-${indicator.description}`} className="rounded-xl border border-white/10 bg-white/[0.025] p-3">
+                      <p className="text-xs font-bold text-slate-200">{indicator.type.replace(/_/g, " ")}</p>
+                      <p className="mt-1 text-xs leading-relaxed text-slate-400">{indicator.description}</p>
+                    </div>
+                  ))}
                 </div>
-                <p className="text-[11px] text-slate-400 line-clamp-1 mt-1">{s.content}</p>
-              </button>
-            ))}
+              ) : (
+                <p className="mt-2 rounded-xl border border-white/10 bg-white/[0.025] p-3 text-xs text-slate-400">No high-risk patterns were detected by the local rules.</p>
+              )}
+            </div>
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">What to do next</h3>
+              <ol className="mt-2 space-y-2">
+                {selected.recommendedActions.map((action, index) => (
+                  <li key={action} className="flex gap-2 rounded-xl bg-cyan-300/5 p-3 text-xs leading-relaxed text-slate-300">
+                    <span className="font-bold text-cyan-200">{index + 1}</span>{action}
+                  </li>
+                ))}
+              </ol>
+            </div>
           </div>
-        </div>
-      )}
+        </section>
+      </div>
+    );
+  }
 
-      {/* Filters Bar */}
-      <div className="bg-[#0E172A] border border-[#1E2E4E] rounded-3xl p-4 space-y-3">
-        {/* Search */}
-        <div className="relative">
-          <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 transform -translate-y-1/2" />
+  return (
+    <div className="mx-auto w-full max-w-4xl space-y-6 px-4 py-6 pb-28 sm:px-6 sm:py-8">
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-cyan-200">Saved locally</p>
+          <h2 className="mt-1 text-2xl font-black tracking-tight text-white sm:text-3xl">Check history</h2>
+          <p className="mt-2 text-sm text-slate-400">Review or remove the checks stored on this device.</p>
+        </div>
+        <button type="button" onClick={() => setActiveTab("scan")} className="inline-flex items-center gap-1.5 rounded-xl bg-cyan-300 px-3.5 py-2.5 text-xs font-bold text-slate-950 hover:bg-cyan-200">
+          New check <ArrowRight className="h-3.5 w-3.5" />
+        </button>
+      </header>
+
+      <section className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
+        <label className="relative block">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
           <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search alerts by keyword, scam category, or sender..."
-            className="w-full bg-[#070B14] border border-[#1A2640] rounded-xl pl-10 pr-4 py-2 text-xs text-slate-200 placeholder:text-slate-500 outline-none focus:border-cyan-500"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search a message or result"
+            className="w-full rounded-xl border border-white/10 bg-slate-950/60 py-2.5 pl-10 pr-3 text-xs text-slate-100 outline-none placeholder:text-slate-600 focus:border-cyan-300/60"
           />
-        </div>
-
-        {/* Filter Chips */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-          {/* Risk Filters */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-[11px] text-slate-500 font-semibold">Risk:</span>
-            {(["ALL", "HIGH", "SUSPICIOUS", "SAFE"] as const).map((r) => (
-              <button
-                key={r}
-                onClick={() => setRiskFilter(r)}
-                className={`text-[11px] px-2.5 py-1 rounded-lg font-medium transition-all ${
-                  riskFilter === r
-                    ? "bg-blue-600 text-white font-bold"
-                    : "bg-[#141F36] text-slate-400 hover:text-slate-200 border border-[#23355A]"
-                }`}
-              >
-                {r === "ALL" ? "All Risks" : r}
-              </button>
-            ))}
-          </div>
-
-          {/* Source Filters */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-[11px] text-slate-500 font-semibold">Source:</span>
-            {(["ALL", "SMS", "NOTIFICATION", "MANUAL", "EMAIL"] as const).map((s) => (
-              <button
-                key={s}
-                onClick={() => setSourceFilter(s)}
-                className={`text-[11px] px-2.5 py-1 rounded-lg font-medium transition-all ${
-                  sourceFilter === s
-                    ? "bg-cyan-600 text-white font-bold"
-                    : "bg-[#141F36] text-slate-400 hover:text-slate-200 border border-[#23355A]"
-                }`}
-              >
-                {s === "ALL" ? "All Sources" : s}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Alerts Feed List */}
-      <div className="space-y-3">
-        {filteredAlerts.length === 0 ? (
-          <div className="bg-[#0E172A] border border-[#1E2E4E] rounded-3xl p-8 text-center space-y-2">
-            <ShieldCheck className="w-10 h-10 text-emerald-400 mx-auto opacity-70" />
-            <h4 className="text-sm font-bold text-slate-200">No Alerts Found</h4>
-            <p className="text-xs text-slate-400 max-w-sm mx-auto">
-              No security alerts match your selected filters. Incoming monitored SMS and notifications will appear here in real time.
-            </p>
-          </div>
-        ) : (
-          filteredAlerts.map((alert) => (
-            <div
-              key={alert.id}
-              onClick={() => handleSelectAlert(alert)}
-              className={`bg-[#0E172A] hover:bg-[#121D35] border rounded-2xl p-4 transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md ${
-                !alert.reviewed
-                  ? "border-rose-500/40 shadow-rose-950/20"
-                  : "border-[#1E2E4E]"
-              }`}
+        </label>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {([
+            ["all", "All checks"],
+            ["attention", "Needs attention"],
+            ["safe", "No red flags"],
+          ] as const).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setFilter(value)}
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${filter === value ? "bg-cyan-300 text-slate-950" : "bg-slate-950/50 text-slate-400 hover:text-slate-200"}`}
             >
-              <div className="flex items-start gap-3.5">
-                <div
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
-                    alert.riskLevel === "HIGH"
-                      ? "bg-rose-500/20 text-rose-400 border border-rose-500/30"
-                      : alert.riskLevel === "SUSPICIOUS"
-                      ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
-                      : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                  }`}
-                >
-                  {alert.riskLevel === "HIGH" ? (
-                    <AlertTriangle className="w-5 h-5" />
-                  ) : alert.riskLevel === "SUSPICIOUS" ? (
-                    <ShieldAlert className="w-5 h-5" />
-                  ) : (
-                    <ShieldCheck className="w-5 h-5" />
-                  )}
-                </div>
-
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span
-                      className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
-                        alert.riskLevel === "HIGH"
-                          ? "bg-rose-500/20 text-rose-300 border border-rose-500/40"
-                          : alert.riskLevel === "SUSPICIOUS"
-                          ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
-                          : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
-                      }`}
-                    >
-                      {alert.riskLevel}
-                    </span>
-                    <span className="text-xs font-bold text-slate-100">
-                      {alert.category.replace(/_/g, " ")}
-                    </span>
-                    <span className="text-[10px] text-slate-400">
-                      via {alert.sourceType} ({alert.sender || "Unknown"})
-                    </span>
-                    {!alert.reviewed && (
-                      <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
-                    )}
-                  </div>
-
-                  <p className="text-xs text-slate-300 mt-1.5 line-clamp-2 leading-relaxed">
-                    {alert.originalContentSnippet}
-                  </p>
-
-                  <div className="flex items-center gap-3 mt-2 text-[10px] text-slate-400">
-                    <span>{new Date(alert.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
-                    <span>• Urgency: <strong className="text-slate-200">{alert.urgency}</strong></span>
-                    {alert.sentimentSignals.length > 0 && (
-                      <span>• Signals: {alert.sentimentSignals.slice(0, 2).join(", ")}</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    deleteRecord(alert.id);
-                  }}
-                  className="p-2 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
-                  title="Delete alert"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-                <ChevronRight className="w-4 h-4 text-slate-400" />
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-
-      {/* Alert Detail Modal */}
-      {selectedAlert && (
-        <div className="fixed inset-0 z-50 bg-[#03060C]/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="w-full max-w-lg bg-[#0F172A] border border-[#1E2E4E] rounded-3xl p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-start justify-between pb-3 border-b border-[#1E2E4E]">
-              <div>
-                <span
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    selectedAlert.riskLevel === "HIGH"
-                      ? "bg-rose-500/20 text-rose-300 border border-rose-500/30"
-                      : selectedAlert.riskLevel === "SUSPICIOUS"
-                      ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
-                      : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                  }`}
-                >
-                  {selectedAlert.riskLevel} RISK
-                </span>
-                <h3 className="text-base font-bold text-slate-100 mt-1">
-                  {selectedAlert.category.replace(/_/g, " ")}
-                </h3>
-                <div className="text-xs text-slate-400 mt-0.5">
-                  Sender: {selectedAlert.sender} • Source: {selectedAlert.sourceType}
-                </div>
-              </div>
-              <button
-                onClick={() => setSelectedAlert(null)}
-                className="text-slate-400 hover:text-slate-200 p-1"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Content snippet */}
-            <div className="bg-[#070B14] p-3 rounded-xl border border-[#1A2640] text-xs text-slate-200">
-              <span className="text-[10px] font-bold text-slate-400 block mb-1 uppercase">
-                Captured Message
-              </span>
-              {selectedAlert.originalContentSnippet}
-            </div>
-
-            {/* Why flagged */}
-            <div className="space-y-2">
-              <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider">
-                Why this was flagged:
-              </h4>
-              {selectedAlert.indicators.map((ind, i) => (
-                <div key={i} className="text-xs text-slate-300 flex items-start gap-2">
-                  <span className="text-rose-400 font-bold">•</span>
-                  <span>{ind.description}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* Recommended actions */}
-            <div className="bg-[#121B2D] border border-[#1E2E4E] rounded-xl p-3.5 space-y-1.5">
-              <h4 className="text-xs font-bold text-cyan-300 uppercase tracking-wider">
-                Recommended Action:
-              </h4>
-              {selectedAlert.recommendedActions.map((act, i) => (
-                <p key={i} className="text-xs text-slate-200">
-                  {i + 1}. {act}
-                </p>
-              ))}
-            </div>
-
-            {/* Exclusion action if package name available */}
-            {selectedAlert.sourceAppPackage && (
-              <div className="pt-2 border-t border-[#1E2E4E] flex items-center justify-between">
-                <span className="text-xs text-slate-400">
-                  Source: {selectedAlert.sourceAppName || selectedAlert.sourceAppPackage}
-                </span>
-                <button
-                  onClick={() => {
-                    if (selectedAlert.sourceAppPackage) {
-                      toggleAppExclusion(selectedAlert.sourceAppPackage);
-                    }
-                  }}
-                  className="text-xs px-2.5 py-1 rounded-lg bg-[#141F36] hover:bg-[#1E2E4E] text-amber-300 border border-amber-500/30 flex items-center gap-1"
-                >
-                  <ShieldOff className="w-3.5 h-3.5" />
-                  <span>Exclude App From Future Scans</span>
-                </button>
-              </div>
-            )}
-
-            {/* Feedback footer */}
-            <div className="flex items-center justify-between pt-2 border-t border-[#1E2E4E]">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => reportFeedback(selectedAlert.id, "NOT_A_SCAM")}
-                  className="text-xs text-slate-400 hover:text-amber-300 flex items-center gap-1"
-                >
-                  <Flag className="w-3 h-3" />
-                  <span>Report False Positive</span>
-                </button>
-              </div>
-              <button
-                onClick={() => setSelectedAlert(null)}
-                className="px-4 py-1.5 rounded-xl bg-blue-600 text-white text-xs font-semibold hover:bg-blue-500"
-              >
-                Dismiss
-              </button>
-            </div>
-          </div>
+              {label}
+            </button>
+          ))}
         </div>
+      </section>
+
+      {records.length === 0 ? (
+        <section className="rounded-[1.75rem] border border-dashed border-white/10 bg-white/[0.025] px-5 py-12 text-center">
+          <ClipboardList className="mx-auto h-9 w-9 text-cyan-200" />
+          <h3 className="mt-3 text-base font-bold text-slate-200">No checks to show</h3>
+          <p className="mx-auto mt-1 max-w-sm text-xs leading-relaxed text-slate-400">Run a message or link check and the result will be saved here on this device.</p>
+        </section>
+      ) : (
+        <section className="space-y-2.5">
+          {records.map((record) => {
+            const tone = riskTone[record.riskLevel];
+            return (
+              <button
+                key={record.id}
+                type="button"
+                onClick={() => openRecord(record)}
+                className="flex w-full items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.035] p-4 text-left transition hover:border-cyan-200/25 hover:bg-white/[0.055]"
+              >
+                <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl border ${tone}`}>
+                  {record.riskLevel === "SAFE" ? <CheckCircle2 className="h-4 w-4" /> : <ShieldAlert className="h-4 w-4" />}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-bold text-slate-100">{record.category.replace(/_/g, " ")}</span>
+                    <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${tone}`}>{record.riskLevel.replace(/_/g, " ")}</span>
+                    {!record.reviewed && record.riskLevel !== "SAFE" && <span className="text-[10px] font-semibold text-cyan-200">New</span>}
+                  </span>
+                  <span className="mt-1 block truncate text-xs text-slate-400">{record.originalContentSnippet}</span>
+                  <span className="mt-1 block text-[10px] text-slate-500">{new Date(record.createdAt).toLocaleString()}</span>
+                </span>
+                <ArrowRight className="mt-2 h-4 w-4 shrink-0 text-slate-500" />
+              </button>
+            );
+          })}
+        </section>
       )}
     </div>
   );
